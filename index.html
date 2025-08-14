@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Twibbon</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.75rem;
+            background-color: #e2e8f0; /* Default background if no image/blur */
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-top: 1.5rem;
+            cursor: grab; /* Cursor for dragging */
+            touch-action: none; /* Prevent browser default touch actions like scrolling/zooming */
+        }
+        canvas.dragging {
+            cursor: grabbing;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 2px dashed #9ca3af;
+            background-color: #f9fafb;
+            color: #4b5563;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .custom-file-upload:hover {
+            background-color: #eff6ff;
+            border-color: #60a5fa;
+            color: #2563eb;
+        }
+        .button-primary {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .button-primary:hover {
+            background-color: #2563eb;
+        }
+        .button-secondary {
+            background-color: #6b7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .button-secondary:hover {
+            background-color: #4b5563;
+        }
+        .message-box {
+            background-color: #fef2f2;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            width: 100%;
+            text-align: center;
+            display: none;
+        }
+        .message-box.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-5">
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Buat Twibbon Anda</h1>
+
+        <div class="grid grid-cols-1 gap-6 w-full mb-6">
+            <!-- Unggah Foto Anda -->
+            <div class="flex flex-col items-center p-4 border border-gray-200 rounded-lg shadow-sm">
+                <label for="userPhotoInput" class="custom-file-upload mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-4 3 3 5-5V15z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Unggah Foto Anda</span>
+                </label>
+                <input type="file" id="userPhotoInput" accept="image/*">
+                <p id="userPhotoFileName" class="text-sm text-gray-500 truncate w-full text-center">Belum ada foto yang dipilih</p>
+            </div>
+        </div>
+
+        <div class="message-box" id="messageBox"></div>
+
+        <canvas id="twibbonCanvas" width="1080" height="1350"></canvas>
+
+        <div class="flex flex-col sm:flex-row gap-4 mt-6 w-full justify-center">
+            <button id="zoomInButton" class="button-secondary flex-grow sm:flex-grow-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Zoom In
+            </button>
+            <button id="zoomOutButton" class="button-secondary flex-grow sm:flex-grow-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                </svg>
+                Zoom Out
+            </button>
+            <button id="resetButton" class="button-secondary flex-grow sm:flex-grow-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H6a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm10 15a1 1 0 01-1-1v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 011.885-.666A5.002 5.002 0 0014.001 13H14a1 1 0 010-2h2a1 1 0 011 1v4a1 1 0 01-1 1z" clip-rule="evenodd" />
+                </svg>
+                Reset Gambar
+            </button>
+            <button id="processButton" class="button-primary flex-grow sm:flex-grow-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                </svg>
+                Proses & Unduh
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const userPhotoInput = document.getElementById('userPhotoInput');
+        const twibbonCanvas = document.getElementById('twibbonCanvas');
+        const ctx = twibbonCanvas.getContext('2d');
+        const processButton = document.getElementById('processButton');
+        const userPhotoFileName = document.getElementById('userPhotoFileName');
+        const messageBox = document.getElementById('messageBox');
+        const zoomInButton = document.getElementById('zoomInButton');
+        const zoomOutButton = document.getElementById('zoomOutButton');
+        const resetButton = document.getElementById('resetButton');
+
+        let userPhoto = null;
+        let twibbonFrame = new Image(); // Objek Image untuk bingkai Twibbon
+        let twibbonFrameLoaded = false; // Status pemuatan bingkai
+
+        // Status manipulasi gambar
+        let imageX = 0;
+        let imageY = 0;
+        let imageScale = 1;
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const CANVAS_WIDTH = 1080;
+        const CANVAS_HEIGHT = 1350;
+        const BLUR_AMOUNT = 5; // Jumlah blur dalam piksel
+
+        twibbonCanvas.width = CANVAS_WIDTH;
+        twibbonCanvas.height = CANVAS_HEIGHT;
+
+        // Buat kanvas di luar layar untuk efek blur
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = CANVAS_WIDTH;
+        tempCanvas.height = CANVAS_HEIGHT;
+
+        // URL bingkai Twibbon default
+        const defaultTwibbonFrameUrl = 'https://i.imgur.com/nDIbW8s.jpeg';
+
+        // PENTING: Atur crossOrigin untuk menghindari masalah CORS saat mengekspor kanvas
+        twibbonFrame.crossOrigin = "Anonymous";
+
+        // Muat bingkai Twibbon default saat skrip dimuat
+        twibbonFrame.onload = () => {
+            twibbonFrameLoaded = true;
+            console.log('Bingkai Twibbon berhasil dimuat.');
+            drawCombinedImage(); // Gambar status awal dengan bingkai
+            // Tampilkan pesan sukses awal jika bingkai dimuat dan belum ada foto
+            if (!userPhoto) {
+                showMessage('Bingkai Twibbon berhasil dimuat. Unggah foto Anda untuk memulai.', 'success');
+            }
+        };
+        twibbonFrame.onerror = (e) => {
+            twibbonFrameLoaded = false; // Pastikan status dimuat salah
+            console.error('Gagal memuat bingkai Twibbon:', e);
+            showMessage('Gagal memuat bingkai Twibbon default. Pastikan URL bingkai valid dan dapat diakses publik.', 'error');
+            drawCombinedImage(); // Gambar ulang untuk menampilkan pesan kesalahan
+        };
+        twibbonFrame.src = defaultTwibbonFrameUrl;
+
+        function showMessage(message, type = 'error') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box show ${type === 'error' ? 'bg-red-100 text-red-700 border-red-400' : 'bg-green-100 text-green-700 border-green-400'}`;
+        }
+
+        function hideMessage() {
+            messageBox.classList.remove('show');
+        }
+
+        function loadImage(file) {
+            hideMessage();
+            if (file) {
+                userPhotoFileName.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        userPhoto = img;
+                        resetImagePosition(); // Atur ulang posisi dan skala saat gambar baru dimuat
+                        drawCombinedImage();
+                        showMessage('Foto Anda berhasil diunggah. Sesuaikan posisi dan zoom, lalu unduh!', 'success');
+                    };
+                    img.onerror = () => {
+                        showMessage('Gagal memuat foto. Pastikan itu adalah file gambar yang valid.', 'error');
+                        userPhotoFileName.textContent = `Gagal memuat ${file.name}`;
+                        userPhoto = null;
+                        drawCombinedImage(); // Gambar ulang tanpa foto pengguna
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                userPhotoFileName.textContent = `Belum ada foto yang dipilih`;
+                userPhoto = null;
+                drawCombinedImage(); // Gambar ulang tanpa foto pengguna
+                showMessage('Tidak ada foto yang dipilih.', 'error');
+            }
+        }
+
+        userPhotoInput.addEventListener('change', (event) => {
+            loadImage(event.target.files[0]);
+        });
+
+        function resetImagePosition() {
+            if (!userPhoto) return;
+
+            const imgAspectRatio = userPhoto.width / userPhoto.height;
+            const canvasAspectRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
+
+            if (imgAspectRatio > canvasAspectRatio) {
+                // Gambar lebih lebar dari kanvas, skala tinggi agar sesuai dengan tinggi kanvas
+                imageScale = CANVAS_HEIGHT / userPhoto.height;
+                imageX = (CANVAS_WIDTH - (userPhoto.width * imageScale)) / 2;
+                imageY = 0;
+            } else {
+                // Gambar lebih tinggi dari kanvas, skala lebar agar sesuai dengan lebar kanvas
+                imageScale = CANVAS_WIDTH / userPhoto.width;
+                imageY = (CANVAS_HEIGHT - (userPhoto.height * imageScale)) / 2;
+                imageX = 0;
+            }
+            drawCombinedImage();
+        }
+
+        function drawCombinedImage() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); // Bersihkan kanvas
+
+            // Prioritas 1: Jika bingkai Twibbon belum dimuat atau gagal dimuat
+            if (!twibbonFrameLoaded) {
+                // Gambar latar belakang solid
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                // Tampilkan pesan kesalahan bingkai
+                ctx.fillStyle = '#ef4444'; // Merah untuk kesalahan
+                ctx.font = '24px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Gagal memuat bingkai Twibbon. Periksa URL.', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+                // Nonaktifkan semua tombol interaksi
+                processButton.disabled = true;
+                resetButton.disabled = true;
+                zoomInButton.disabled = true;
+                zoomOutButton.disabled = true;
+                return; // Berhenti di sini karena bingkai adalah komponen kunci
+            }
+
+            // Prioritas 2: Gambar latar belakang (blur dari foto pengguna atau solid)
+            if (userPhoto) {
+                const imgAspectRatio = userPhoto.width / userPhoto.height;
+                const canvasAspectRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
+
+                let bgScale;
+                let bgX = 0;
+                let bgY = 0;
+
+                // Hitung skala untuk menutupi seluruh kanvas dengan gambar blur
+                if (imgAspectRatio > canvasAspectRatio) {
+                    bgScale = CANVAS_WIDTH / userPhoto.width;
+                    bgY = (CANVAS_HEIGHT - (userPhoto.height * bgScale)) / 2;
+                } else {
+                    bgScale = CANVAS_HEIGHT / userPhoto.height;
+                    bgX = (CANVAS_WIDTH - (userPhoto.width * bgScale)) / 2;
+                }
+
+                tempCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                tempCtx.drawImage(userPhoto, bgX, bgY, userPhoto.width * bgScale, userPhoto.height * bgScale);
+
+                ctx.filter = `blur(${BLUR_AMOUNT}px)`;
+                ctx.drawImage(tempCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.filter = 'none'; // Reset filter untuk gambar selanjutnya
+            } else {
+                // Jika tidak ada foto pengguna, gambar latar belakang solid
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            }
+
+            // Prioritas 3: Gambar foto pengguna atau teks placeholder
+            if (userPhoto) {
+                ctx.drawImage(
+                    userPhoto,
+                    0, 0, userPhoto.width, userPhoto.height, // Persegi panjang sumber gambar
+                    imageX, imageY, userPhoto.width * imageScale, userPhoto.height * imageScale // Persegi panjang tujuan kanvas
+                );
+            } else {
+                // Jika tidak ada foto pengguna, tampilkan teks placeholder
+                ctx.fillStyle = '#6b7280';
+                ctx.font = '24px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Unggah foto Anda untuk memulai', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            }
+
+            // Prioritas 4: Gambar bingkai twibbon di atas
+            ctx.drawImage(twibbonFrame, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Aktifkan/nonaktifkan tombol berdasarkan status
+            if (userPhoto && twibbonFrameLoaded) {
+                processButton.disabled = false;
+                resetButton.disabled = false;
+                zoomInButton.disabled = false;
+                zoomOutButton.disabled = false;
+            } else {
+                processButton.disabled = true;
+                resetButton.disabled = true;
+                zoomInButton.disabled = true;
+                zoomOutButton.disabled = true;
+            }
+        }
+
+        // --- Event Mouse untuk Menggeser ---
+        twibbonCanvas.addEventListener('mousedown', (e) => {
+            if (!userPhoto) return;
+            isDragging = true;
+            twibbonCanvas.classList.add('dragging');
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+
+        twibbonCanvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || !userPhoto) return;
+            const dx = e.offsetX - lastX;
+            const dy = e.offsetY - lastY;
+            imageX += dx;
+            imageY += dy;
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+            drawCombinedImage();
+        });
+
+        twibbonCanvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            twibbonCanvas.classList.remove('dragging');
+        });
+
+        twibbonCanvas.addEventListener('mouseout', () => {
+            isDragging = false;
+            twibbonCanvas.classList.remove('dragging');
+        });
+
+        // --- Event Sentuh untuk Menggeser (Mobile) ---
+        twibbonCanvas.addEventListener('touchstart', (e) => {
+            if (!userPhoto || e.touches.length !== 1) return; // Hanya tangani satu sentuhan untuk menggeser
+            e.preventDefault(); // Mencegah pengguliran default
+            isDragging = true;
+            twibbonCanvas.classList.add('dragging');
+            const touch = e.touches[0];
+            const rect = twibbonCanvas.getBoundingClientRect();
+            lastX = touch.clientX - rect.left;
+            lastY = touch.clientY - rect.top;
+        });
+
+        twibbonCanvas.addEventListener('touchmove', (e) => {
+            if (!isDragging || !userPhoto || e.touches.length !== 1) return;
+            e.preventDefault(); // Mencegah pengguliran default
+            const touch = e.touches[0];
+            const rect = twibbonCanvas.getBoundingClientRect();
+            const currentX = touch.clientX - rect.left;
+            const currentY = touch.clientY - rect.top;
+            const dx = currentX - lastX;
+            const dy = currentY - lastY;
+            imageX += dx;
+            imageY += dy;
+            lastX = currentX;
+            lastY = currentY;
+            drawCombinedImage();
+        });
+
+        twibbonCanvas.addEventListener('touchend', () => {
+            isDragging = false;
+            twibbonCanvas.classList.remove('dragging');
+        });
+
+        twibbonCanvas.addEventListener('touchcancel', () => { // Menangani jika sentuhan dibatalkan
+            isDragging = false;
+            twibbonCanvas.classList.remove('dragging');
+        });
+
+        // --- Event Roda Gulir untuk Zooming (Desktop) ---
+        twibbonCanvas.addEventListener('wheel', (e) => {
+            if (!userPhoto) return;
+            e.preventDefault(); // Mencegah pengguliran halaman
+
+            const zoomFactor = 1.1; // Seberapa banyak untuk memperbesar/memperkecil
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+
+            let newScale = imageScale;
+            if (e.deltaY < 0) { // Zoom in
+                newScale *= zoomFactor;
+            } else { // Zoom out
+                newScale /= zoomFactor;
+            }
+
+            // Batasi zoom untuk mencegah gambar menghilang atau menjadi terlalu kecil/besar
+            newScale = Math.max(0.1, Math.min(5, newScale));
+
+            // Sesuaikan posisi gambar untuk memperbesar di sekitar kursor mouse
+            imageX = mouseX - ((mouseX - imageX) * (newScale / imageScale));
+            imageY = mouseY - ((mouseY - imageY) * (newScale / imageScale));
+            imageScale = newScale;
+
+            drawCombinedImage();
+        });
+
+        // --- Tombol Zoom untuk Mobile/Aksesibilitas ---
+        zoomInButton.addEventListener('click', () => {
+            if (!userPhoto) return;
+            const zoomFactor = 1.1;
+            const centerX = CANVAS_WIDTH / 2;
+            const centerY = CANVAS_HEIGHT / 2;
+
+            let newScale = imageScale * zoomFactor;
+            newScale = Math.min(5, newScale); // Zoom maksimal
+
+            imageX = centerX - ((centerX - imageX) * (newScale / imageScale));
+            imageY = centerY - ((centerY - imageY) * (newScale / imageScale));
+            imageScale = newScale;
+            drawCombinedImage();
+        });
+
+        zoomOutButton.addEventListener('click', () => {
+            if (!userPhoto) return;
+            const zoomFactor = 1.1;
+            const centerX = CANVAS_WIDTH / 2;
+            const centerY = CANVAS_HEIGHT / 2;
+
+            let newScale = imageScale / zoomFactor;
+            newScale = Math.max(0.1, newScale); // Zoom minimal
+
+            imageX = centerX - ((centerX - imageX) * (newScale / imageScale));
+            imageY = centerY - ((centerY - imageY) * (newScale / imageScale));
+            imageScale = newScale;
+            drawCombinedImage();
+        });
+
+        resetButton.addEventListener('click', () => {
+            if (userPhoto) {
+                resetImagePosition();
+                showMessage('Posisi gambar diatur ulang.', 'success');
+            } else {
+                showMessage('Tidak ada gambar untuk direset.', 'error');
+            }
+        });
+
+        // Tombol Proses dan Unduh gabungan
+        processButton.addEventListener('click', () => {
+            console.log('Tombol Proses & Unduh diklik.');
+            if (!processButton.disabled) {
+                console.log('Tombol tidak dinonaktifkan. Melanjutkan proses unduh.');
+                try {
+                    const link = document.createElement('a');
+                    link.download = 'twibbon_anda.png'; // Nama file unduhan
+                    const dataURL = twibbonCanvas.toDataURL('image/png');
+                    // Periksa apakah dataURL kosong atau tidak valid (misalnya, jika kanvas terkontaminasi)
+                    if (dataURL === 'data:,' || dataURL.length < 100) { // data:, adalah URL default jika gagal
+                        throw new Error('Kanvas terkontaminasi atau dataURL kosong. Periksa masalah CORS.');
+                    }
+                    console.log('Data URL dibuat (potongan):', dataURL.substring(0, 50) + '...'); // Log sebagian URL
+                    link.href = dataURL;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showMessage('Twibbon berhasil diunduh!', 'success');
+                    console.log('Proses unduh selesai.');
+                } catch (error) {
+                    console.error('Terjadi kesalahan saat mengunduh Twibbon:', error);
+                    // Pesan kesalahan yang lebih spesifik untuk masalah CORS
+                    if (error.message.includes('Kanvas terkontaminasi')) {
+                        showMessage('Gagal mengunduh: Gambar bingkai mungkin memiliki masalah CORS. Coba unggah bingkai ke layanan hosting gambar lain yang mendukung CORS (misalnya, Postimages.org) dan perbarui URL.', 'error');
+                    } else {
+                        showMessage('Gagal mengunduh Twibbon. Coba lagi atau periksa konsol untuk detail.', 'error');
+                    }
+                }
+            } else {
+                console.log('Tombol dinonaktifkan. Tidak dapat mengunduh.');
+                showMessage('Harap unggah foto Anda dan pastikan bingkai dimuat.', 'error');
+            }
+        });
+
+        // Gambar awal saat halaman dimuat
+        drawCombinedImage();
+    </script>
+</body>
+</html>
